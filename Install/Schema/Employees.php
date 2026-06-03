@@ -40,9 +40,72 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
+                        'notNull'       => false,
+                    ]
+                ),
+                new Column(
+                    'designation',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => false,
+                    ]
+                ),
+                new Column(
+                    'manager_id',
+                    [
+                        'type'          => Column::TYPE_INTEGER,
+                        'notNull'       => false,
+                    ]
+                ),
+                new Column(
+                    'drivers_license',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
                         'notNull'       => true,
                     ]
-                )
+                ),
+                new Column(
+                    'drivers_license_valid_till',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => true,
+                    ]
+                ),
+                new Column(
+                    'hazardous_license',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => true,
+                    ]
+                ),
+                new Column(
+                    'hazardous_license_valid_till',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => true,
+                    ]
+                ),
+                new Column(
+                    'adhar_card',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => true,
+                    ]
+                ),
+                new Column(
+                    'pan_card',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 50,
+                        'notNull'       => true,
+                    ]
+                ),
             ],
             'indexes' => [
                 new Index(
