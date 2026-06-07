@@ -21,6 +21,14 @@ class Employees
                         'primary'       => true,
                     ]
                 ),
+                new Column(
+                    'portrait',
+                    [
+                        'type'          => Column::TYPE_VARCHAR,
+                        'size'          => 1024,
+                        'notNull'       => false,
+                    ]
+                ),
                 new Column(//Self Company ID
                     'organisation_id',
                     [
@@ -32,7 +40,7 @@ class Employees
                     'account_id',
                     [
                         'type'          => Column::TYPE_INTEGER,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -63,7 +71,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -71,7 +79,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -79,7 +87,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -87,7 +95,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -95,7 +103,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
                 new Column(
@@ -103,7 +111,7 @@ class Employees
                     [
                         'type'          => Column::TYPE_VARCHAR,
                         'size'          => 50,
-                        'notNull'       => true,
+                        'notNull'       => false,
                     ]
                 ),
             ],

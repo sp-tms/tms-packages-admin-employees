@@ -4,14 +4,16 @@ namespace Apps\Tms\Packages\Employees\Model;
 
 use System\Base\BaseModel;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesAddressBook;
+use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesContactBook;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\Users\BasepackagesUsersAccounts;
-use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\Users\BasepackagesUsersProfiles;
 
 class AppsTmsEmployees extends BaseModel
 {
     protected $modelRelations = [];
 
     public $id;
+
+    public $portrait;
 
     public $organisation_id;
 
@@ -46,15 +48,18 @@ class AppsTmsEmployees extends BaseModel
             ]
         );
 
-        $this->modelRelations['profile']['relationObj'] = $this->hasOneThrough(
-            'account_id',
-            BasepackagesUsersAccounts::class,
+        $this->modelRelations['contact']['relationObj'] = $this->hasOne(
             'id',
-            'id',
-            BasepackagesUsersProfiles::class,
-            'account_id',
+            BasepackagesContactBook::class,
+            'package_row_id',
             [
-                'alias'         => 'profile'
+                'alias'                 => 'contact',
+                'params'                => [
+                    'conditions'        => 'package_name = :package_name:',
+                    'bind'              => [
+                        'package_name'  => 'Employees'
+                    ]
+                ]
             ]
         );
 

@@ -61,6 +61,7 @@ class Employees extends BasePackage
             $employee = $this->packagesData->last;
 
             $this->addAddresses($data, $employee);
+            $this->addContact($data, $employee);
 
             $this->addResponse('Employee added');
 
@@ -72,11 +73,19 @@ class Employees extends BasePackage
 
     public function updateEmployee($data)
     {
+        $employee = $this->getEmployee((int) $data['id']);
+
+        if (!$this->removeAddresses($data, $employee)) {
+            $this->addResponse('Cannot remove address as it is being used!', 1);
+
+            return false;
+        }
+
         if ($this->update($data)) {
             $employee = $this->packagesData->last;
 
             $this->addAddresses($data, $employee);
-            $this->removeAddresses($data, $employee);
+            $this->updateContact($data, $employee);
 
             $this->addResponse('Employee updated');
 
@@ -151,6 +160,27 @@ class Employees extends BasePackage
                 }
             }
         }
+    }
+
+    protected function addContact($data, $employee)
+    {
+        $data['package_name'] = 'Employees';
+        $data['package_row_id'] = $employee['id'];
+
+        $this->basepackages->addressbook->addContact($data);
+    }
+
+    protected function updateContact($data, $employee)
+    {
+        $dbContact = $this->basepackages->contactBook->getById((int) $employee['id']);
+
+        if ($dbContact) {
+            $dbContact = array_merge($dbContact, $data['address_ids'][$employee['id']]);
+        }
+
+        $this->basepackages->contactBook->updateAddress($dbContact);
+
+        $this->basepackages->contactBook->addContact($data);
     }
 
     public function getEmployeeByReference($reference, $businessType = 'customers')
