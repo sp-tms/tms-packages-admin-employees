@@ -4,6 +4,7 @@ namespace Apps\Tms\Packages\Employees;
 
 use Apps\Tms\Packages\Employees\Model\AppsTmsEmployees;
 use System\Base\BasePackage;
+use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\Users\Accounts\BasepackagesUsersAccountsSecurity;
 
 class Employees extends BasePackage
 {
@@ -20,15 +21,15 @@ class Employees extends BasePackage
         return $this;
     }
 
-    public function getEmployee($employeeId)
+    public function getEmployees($employeeId)
     {
         if ($this->config->databasetype === 'db') {
-            $employeesObj = $this->getFirst('id', $employeeId);
+            $companiesObj = $this->getFirst('id', $employeeId);
 
-            if ($employeesObj) {
-                $employee = $employeesObj->toArray();
+            if ($companiesObj) {
+                $employee = $companiesObj->toArray();
 
-                $addressObj = $employeesObj->getAddresses();
+                $addressObj = $companiesObj->getAddresses();
 
                 $employee['address'] = [];
 
@@ -38,10 +39,9 @@ class Employees extends BasePackage
             }
         } else {
             $this->setFFRelations(true);
-            $this->setFFRelationsConditions(['addresses' => ['package_name', '=', 'Employees'], 'contacts' => ['package_name', '=', 'Employees']]);
+            $this->setFFRelationsConditions(['addresses' => ['package_name', '=', 'Employees'], 'contact' => ['package_name', '=', 'Employees']]);
 
             $employee = $this->getFirst('id', $employeeId, false, true, null, [], true);
-
         }
 
         if (isset($employee)) {
@@ -57,11 +57,52 @@ class Employees extends BasePackage
 
     public function addEmployee($data)
     {
-        if ($this->add($data)) {
-            $employee = $this->packagesData->last;
+        $this->checkDesignation($data);
 
-            $this->addAddresses($data, $employee);
-            $this->addContact($data, $employee);
+        if ($this->add($data)) {
+            $employee = $this->getEmployees($this->packagesData->last['id']);
+
+            //Generate User account in the system (if email is provided)
+            $newAccount = [];
+            $newAccount['status'] = false;
+            $newAccount['email'] = $data['email'];
+            $newAccount['username'] = $data['email'];
+            $newAccount['domain'] = explode('@', $data['email'])[1];
+            $newAccount['profile_package_name'] = "Employees";
+            $newAccount['profile_package_row_id'] = $employee['id'];
+
+            if ($this->basepackages->accounts->add($newAccount)) {
+                $employee['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
+
+                $security = [];
+                $security['role_id'] = 3;//Guest;
+                $security['override_role'] = false;
+                $security['permissions'] = $this->helper->encode([]);
+                $security['force_pwreset'] = false;
+                $password = $this->basepackages->utils->generateNewPassword()['password'];
+                $security['password'] = $this->secTools->hashPassword($password);
+                $security['password_set_on'] = time();
+                $security['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
+
+                $securityModel = new BasepackagesUsersAccountsSecurity;
+
+                $securityStore = $this->ff->store($securityModel->getSource());
+
+                if ($this->config->databasetype === 'db') {
+                    $securityModel->assign($security);
+
+                    $securityModel->create();
+                } else {
+                    $securityStore->insert($security);
+                }
+
+                $this->update($employee);
+            }
+
+            $this->updateAddresses($data, $employee);
+            $this->updateContact($data, $employee);
+
+            $this->addActivityLog($employee);
 
             $this->addResponse('Employee added');
 
@@ -73,19 +114,23 @@ class Employees extends BasePackage
 
     public function updateEmployee($data)
     {
-        $employee = $this->getEmployee((int) $data['id']);
+        $employee = $this->getEmployees((int) $data['id']);
 
-        if (!$this->removeAddresses($data, $employee)) {
-            $this->addResponse('Cannot remove address as it is being used!', 1);
+        if (!$employee) {
+            $this->addResponse('Employee with ID not found', 1);
 
             return false;
         }
 
-        if ($this->update($data)) {
-            $employee = $this->packagesData->last;
+        $this->checkDesignation($data);
 
-            $this->addAddresses($data, $employee);
+        if ($this->update(array_merge($employee, $data))) {
+            $employee = $this->getEmployees($this->packagesData->last['id']);
+
+            $this->updateAddresses($data, $employee);
             $this->updateContact($data, $employee);
+
+            $this->addActivityLog($data, $employee);
 
             $this->addResponse('Employee updated');
 
@@ -97,7 +142,7 @@ class Employees extends BasePackage
 
     public function removeEmployee($data)
     {
-        $employee = $this->getEmployee($data['id']);
+        $employee = $this->getEmployees((int) $data['id']);
 
         //Archive Employee and do not delete it!
         $employee['archived'] = true;
@@ -113,8 +158,24 @@ class Employees extends BasePackage
         return false;
     }
 
-    protected function addAddresses($data, $employee)
+    protected function updateAddresses($data, $employee)
     {
+        if (isset($data['delete_address_ids'])) {
+            if (is_string($data['delete_address_ids'])) {
+                $data['delete_address_ids'] = $this->helper->decode($data['delete_address_ids'], true);
+            }
+
+            if (count($data['delete_address_ids']) > 0) {
+                foreach ($data['delete_address_ids'] as $addressId) {
+                    $dbAddress = $this->basepackages->addressbook->getById($addressId);
+
+                    if ($dbAddress) {
+                        $this->basepackages->addressbook->removeAddress($dbAddress);
+                    }
+                }
+            }
+        }
+
         if (isset($data['address_ids'])) {
             if (is_string($data['address_ids'])) {
                 $data['address_ids'] = $this->helper->decode($data['address_ids'], true);
@@ -130,107 +191,61 @@ class Employees extends BasePackage
                     } else {
                         $dbAddress = $this->basepackages->addressbook->getById($addressId);
 
+                        $dbAddress['package_name'] = 'Employees';
+                        $dbAddress['package_row_id'] = $employee['id'];
+
                         if ($dbAddress) {
                             $dbAddress = array_merge($dbAddress, $data['address_ids'][$addressId]);
+
+                            $this->basepackages->addressbook->updateAddress($dbAddress);
                         }
-
-                        $this->basepackages->addressbook->updateAddress($dbAddress);
                     }
                 }
             }
         }
-    }
 
-    protected function removeAddresses($data, $employee)
-    {
-        if (isset($data['delete_address_ids'])) {
-            if (is_string($data['delete_address_ids'])) {
-                $data['delete_address_ids'] = $this->helper->decode($data['delete_address_ids'], true);
-            }
-
-            if (count($data['delete_address_ids']) > 0) {
-                foreach ($data['delete_address_ids'] as $addressId) {
-                    $dbAddress = $this->basepackages->addressbook->getById($addressId);
-
-                    //Check if address is being used by invoice and other locations!!!!
-                    //
-                    if ($dbAddress) {
-                        $this->basepackages->addressbook->removeAddress($dbAddress);
-                    }
-                }
-            }
-        }
-    }
-
-    protected function addContact($data, $employee)
-    {
-        $data['package_name'] = 'Employees';
-        $data['package_row_id'] = $employee['id'];
-
-        $this->basepackages->addressbook->addContact($data);
+        return true;
     }
 
     protected function updateContact($data, $employee)
     {
-        $dbContact = $this->basepackages->contactBook->getById((int) $employee['id']);
-
-        if ($dbContact) {
-            $dbContact = array_merge($dbContact, $data['address_ids'][$employee['id']]);
+        if (isset($data['id'])) {
+            unset($data['id']);
         }
 
-        $this->basepackages->contactBook->updateAddress($dbContact);
+        if (isset($employee['contact'])) {
+            $contact = $employee['contact'];
+        }
 
-        $this->basepackages->contactBook->addContact($data);
+        $contact['package_name'] = 'Employees';
+        $contact['package_row_id'] = $employee['id'];
+
+        $contact = array_merge($contact, $data);
+
+        if (isset($contact['first_name']) && isset($contact['last_name'])) {
+            $contact['full_name'] = $contact['first_name'] . ' ' . $contact['last_name'];
+        } else {
+            $contact['full_name'] = $contact['first_name'];
+        }
+
+        if (isset($employee['contact']['id'])) {
+            $this->basepackages->contactbook->updateContact($contact);
+        } else {
+            $this->basepackages->contactbook->addContact($contact);
+        }
+
+        return true;
     }
 
-    public function getEmployeeByReference($reference, $businessType = 'customers')
+    protected function checkDesignation(&$data)
     {
-        if ($this->config->databasetype === 'db') {
-            $params =
-                [
-                    'conditions'    => 'reference = :reference: AND business_type = :businessType:',
-                    'bind'          =>
-                        [
-                            'reference'         => $reference,
-                            'businessType'      => $businessType,
-                        ]
-                ];
-        } else {
-            $params = ['conditions' => [['reference', '=', $reference], ['business_type', '=', $businessType]]];
+        if (isset($data['designation']) && str_contains($data['designation'], '"data"')) {
+            $data['designation'] = $this->helper->decode($data['designation'], true);
+            if (isset($data['designation']['data'][0])) {
+                $data['designation'] = $data['designation']['data'][0];
+            } else if (isset($data['designation']['newTags'][0])) {
+                $data['designation'] = strtolower($data['designation']['newTags'][0]);
+            }
         }
-
-        $employee = $this->getByParams($params);
-
-        if ($employee && count($employee) > 0) {
-            $employee = $this->getEmployee($employee[0]['id']);
-
-            return $employee;
-        }
-
-        return false;
-    }
-
-    public function getEmployeesByBusinessType($businessType = 'organisations')
-    {
-        if ($this->config->databasetype === 'db') {
-            $params =
-                [
-                    'conditions'    => 'business_type = :businessType:',
-                    'bind'          =>
-                        [
-                            'businessType'      => $businessType,
-                        ]
-                ];
-        } else {
-            $params = ['conditions' => ['business_type', '=', $businessType]];
-        }
-
-        $employees = $this->getByParams($params);
-
-        if ($employees && count($employees) > 0) {
-            return $employees;
-        }
-
-        return false;
     }
 }

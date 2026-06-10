@@ -5,7 +5,6 @@ namespace Apps\Tms\Packages\Employees\Model;
 use System\Base\BaseModel;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesAddressBook;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesContactBook;
-use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\Users\BasepackagesUsersAccounts;
 
 class AppsTmsEmployees extends BaseModel
 {
@@ -39,12 +38,18 @@ class AppsTmsEmployees extends BaseModel
 
     public function initialize()
     {
-        $this->modelRelations['account']['relationObj'] = $this->hasOne(
-            'account_id',
-            BasepackagesUsersAccounts::class,
+        $this->modelRelations['addresses']['relationObj'] = $this->hasMany(
             'id',
+            BasepackagesAddressBook::class,
+            'package_row_id',
             [
-                'alias'                 => 'account'
+                'alias'                 => 'addresses',
+                'params'                => [
+                    'conditions'        => 'package_name = :package_name:',
+                    'bind'              => [
+                        'package_name'  => 'Employees'
+                    ]
+                ]
             ]
         );
 
@@ -58,21 +63,6 @@ class AppsTmsEmployees extends BaseModel
                     'conditions'        => 'package_name = :package_name:',
                     'bind'              => [
                         'package_name'  => 'Employees'
-                    ]
-                ]
-            ]
-        );
-
-        $this->modelRelations['addresses']['relationObj'] = $this->hasMany(
-            'id',
-            BasepackagesAddressBook::class,
-            'package_row_id',
-            [
-                'alias'                 => 'addresses',
-                'params'                => [
-                    'conditions'        => 'package_name = :package_name:',
-                    'bind'              => [
-                        'package_name'  => 'Companies'
                     ]
                 ]
             ]
