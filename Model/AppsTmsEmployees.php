@@ -20,6 +20,8 @@ class AppsTmsEmployees extends BaseModel
 
     public $employee_id;
 
+    public $status;
+
     public $designation;
 
     public $manager_id;

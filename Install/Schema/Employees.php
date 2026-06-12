@@ -52,6 +52,13 @@ class Employees
                     ]
                 ),
                 new Column(
+                    'status',
+                    [
+                        'type'          => Column::TYPE_TINYINTEGER,
+                        'notNull'       => true,
+                    ]
+                ),
+                new Column(
                     'designation',
                     [
                         'type'          => Column::TYPE_VARCHAR,

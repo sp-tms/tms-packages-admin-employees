@@ -24,12 +24,12 @@ class Employees extends BasePackage
     public function getEmployees($employeeId)
     {
         if ($this->config->databasetype === 'db') {
-            $companiesObj = $this->getFirst('id', $employeeId);
+            $employeesObj = $this->getFirst('id', $employeeId);
 
-            if ($companiesObj) {
-                $employee = $companiesObj->toArray();
+            if ($employeesObj) {
+                $employee = $employeesObj->toArray();
 
-                $addressObj = $companiesObj->getAddresses();
+                $addressObj = $employeesObj->getAddresses();
 
                 $employee['address'] = [];
 
@@ -247,5 +247,32 @@ class Employees extends BasePackage
                 $data['designation'] = strtolower($data['designation']['newTags'][0]);
             }
         }
+    }
+
+    public function getEmployeeAvailableStatus()
+    {
+        return
+            [
+                '1' =>
+                    [
+                        'id' => '1',
+                        'name'  => 'Idle'
+                    ],
+                '2' =>
+                    [
+                        'id' => '2',
+                        'name'  => 'On Trip'
+                    ],
+                '3' =>
+                    [
+                        'id' => '3',
+                        'name'  => 'On Holiday'
+                    ],
+                '4' =>
+                    [
+                        'id' => '4',
+                        'name'  => 'Terminated'
+                    ]
+            ];
     }
 }
