@@ -2,6 +2,7 @@
 
 namespace Apps\Tms\Packages\Employees\Model;
 
+use Apps\Tms\Packages\Employees\Employees;
 use System\Base\BaseModel;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesAddressBook;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\BasepackagesContactBook;
@@ -47,9 +48,9 @@ class AppsTmsEmployees extends BaseModel
             [
                 'alias'                 => 'addresses',
                 'params'                => [
-                    'conditions'        => 'package_name = :package_name:',
+                    'conditions'        => 'package_class = :package_class:',
                     'bind'              => [
-                        'package_name'  => 'Employees'
+                        'package_class'  => str_replace('\\', '_', Employees::class)
                     ]
                 ]
             ]
@@ -62,9 +63,9 @@ class AppsTmsEmployees extends BaseModel
             [
                 'alias'                 => 'contact',
                 'params'                => [
-                    'conditions'        => 'package_name = :package_name:',
+                    'conditions'        => 'package_class = :package_class:',
                     'bind'              => [
-                        'package_name'  => 'Employees'
+                        'package_class'  => str_replace('\\', '_', Employees::class)
                     ]
                 ]
             ]

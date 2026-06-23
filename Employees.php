@@ -2,6 +2,7 @@
 
 namespace Apps\Tms\Packages\Employees;
 
+use Apps\Tms\Packages\Employees\Employees;
 use Apps\Tms\Packages\Employees\Model\AppsTmsEmployees;
 use System\Base\BasePackage;
 use System\Base\Providers\BasepackagesServiceProvider\Packages\Model\Users\Accounts\BasepackagesUsersAccountsSecurity;
@@ -39,7 +40,12 @@ class Employees extends BasePackage
             }
         } else {
             $this->setFFRelations(true);
-            $this->setFFRelationsConditions(['addresses' => ['package_name', '=', 'Employees'], 'contact' => ['package_name', '=', 'Employees']]);
+            $this->setFFRelationsConditions(
+                [
+                    'addresses' => ['package_class', '=', str_replace('\\', '_', Employees::class)],
+                    'contact' => ['package_class', '=', str_replace('\\', '_', Employees::class)]
+                ]
+            );
 
             $employee = $this->getFirst('id', $employeeId, false, true, null, [], true);
         }
@@ -68,7 +74,7 @@ class Employees extends BasePackage
             $newAccount['email'] = $data['email'];
             $newAccount['username'] = $data['email'];
             $newAccount['domain'] = explode('@', $data['email'])[1];
-            $newAccount['profile_package_name'] = "Employees";
+            $newAccount['profile_package_class'] = str_replace('\\', '_', Employees::class);
             $newAccount['profile_package_row_id'] = $employee['id'];
 
             if ($this->basepackages->accounts->add($newAccount)) {
@@ -104,6 +110,10 @@ class Employees extends BasePackage
 
             $this->addActivityLog($employee);
 
+            if ($employee['portrait'] !== '') {
+                $this->basepackages->storages->changeOrphanStatus(newUUID : $employee['portrait'], status: 0);
+            }
+
             $this->addResponse('Employee added');
 
             return true;
@@ -114,7 +124,7 @@ class Employees extends BasePackage
 
     public function updateEmployee($data)
     {
-        $employee = $this->getEmployees((int) $data['id']);
+        $employee = $employeeArr = $this->getEmployees((int) $data['id']);
 
         if (!$employee) {
             $this->addResponse('Employee with ID not found', 1);
@@ -130,7 +140,11 @@ class Employees extends BasePackage
             $this->updateAddresses($data, $employee);
             $this->updateContact($data, $employee);
 
-            $this->addActivityLog($data, $employee);
+            $this->addActivityLog($data, $employeeArr);
+
+            if ($employee['portrait'] !== '') {
+                $this->basepackages->storages->changeOrphanStatus(newUUID : $employee['portrait'], status: 0);
+            }
 
             $this->addResponse('Employee updated');
 
@@ -184,14 +198,14 @@ class Employees extends BasePackage
             if (count($data['address_ids']) > 0) {
                 foreach ($data['address_ids'] as $addressId => $address) {
                     if (isset($address['new']) && $address['new'] == 1) {
-                        $address['package_name'] = 'Employees';
+                        $address['package_class'] = str_replace('\\', '_', Employees::class);
                         $address['package_row_id'] = $employee['id'];
 
                         $this->basepackages->addressbook->addAddress($address);
                     } else {
                         $dbAddress = $this->basepackages->addressbook->getById($addressId);
 
-                        $dbAddress['package_name'] = 'Employees';
+                        $dbAddress['package_class'] = str_replace('\\', '_', Employees::class);
                         $dbAddress['package_row_id'] = $employee['id'];
 
                         if ($dbAddress) {
@@ -217,7 +231,7 @@ class Employees extends BasePackage
             $contact = $employee['contact'];
         }
 
-        $contact['package_name'] = 'Employees';
+        $contact['package_class'] = str_replace('\\', '_', Employees::class);
         $contact['package_row_id'] = $employee['id'];
 
         $contact = array_merge($contact, $data);
