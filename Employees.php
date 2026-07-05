@@ -112,6 +112,7 @@ class Employees extends BasePackage
 
             if ($employee['portrait'] !== '') {
                 $this->basepackages->storages->changeOrphanStatus(newUUID : $employee['portrait'], status: 0);
+                $this->basepackages->storages->updatePackageInfo($employee['portrait'], $employee['id']);
             }
 
             $this->addResponse('Employee added');
@@ -144,6 +145,7 @@ class Employees extends BasePackage
 
             if ($employee['portrait'] !== '') {
                 $this->basepackages->storages->changeOrphanStatus(newUUID : $employee['portrait'], status: 0);
+                $this->basepackages->storages->updatePackageInfo($employee['portrait'], $employee['id']);
             }
 
             $this->addResponse('Employee updated');
