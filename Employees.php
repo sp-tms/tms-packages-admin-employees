@@ -68,43 +68,7 @@ class Employees extends BasePackage
         if ($this->add($data)) {
             $employee = $this->getEmployees($this->packagesData->last['id']);
 
-            //Generate User account in the system (if email is provided)
-            $newAccount = [];
-            $newAccount['status'] = false;
-            $newAccount['email'] = $data['email'];
-            $newAccount['username'] = $data['email'];
-            $newAccount['domain'] = explode('@', $data['email'])[1];
-            $newAccount['profile_package_class'] = str_replace('\\', '_', Employees::class);
-            $newAccount['profile_package_row_id'] = $employee['id'];
-
-            if ($this->basepackages->accounts->add($newAccount)) {
-                $employee['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
-
-                $security = [];
-                $security['role_id'] = 3;//Guest;
-                $security['override_role'] = false;
-                $security['permissions'] = $this->helper->encode([]);
-                $security['force_pwreset'] = false;
-                $password = $this->basepackages->utils->generateNewPassword()['password'];
-                $security['password'] = $this->secTools->hashPassword($password);
-                $security['password_set_on'] = time();
-                $security['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
-
-                $securityModel = new BasepackagesUsersAccountsSecurity;
-
-                $securityStore = $this->ff->store($securityModel->getSource());
-
-                if ($this->config->databasetype === 'db') {
-                    $securityModel->assign($security);
-
-                    $securityModel->create();
-                } else {
-                    $securityStore->insert($security);
-                }
-
-                $this->update($employee);
-            }
-
+            $this->checkUserAccountViaEmail($data, $employee);
             $this->updateAddresses($data, $employee);
             $this->updateContact($data, $employee);
 
@@ -138,6 +102,7 @@ class Employees extends BasePackage
         if ($this->update(array_merge($employee, $data))) {
             $employee = $this->getEmployees($this->packagesData->last['id']);
 
+            $this->checkUserAccountViaEmail($data, $employee);
             $this->updateAddresses($data, $employee);
             $this->updateContact($data, $employee);
 
@@ -262,6 +227,54 @@ class Employees extends BasePackage
             } else if (isset($data['designation']['newTags'][0])) {
                 $data['designation'] = strtolower($data['designation']['newTags'][0]);
             }
+        }
+    }
+
+    protected function checkUserAccountViaEmail($data, $employee)
+    {
+        //Generate User account in the system (if email is provided)
+        if (isset($data['email']) && $data['email'] !== '') {
+            $emailAccount = $this->basepackages->accounts->checkAccountBy($data['email']);
+
+            if (!$emailAccount) {
+                $newAccount = [];
+                $newAccount['status'] = false;
+                $newAccount['email'] = $data['email'];
+                $newAccount['username'] = $data['email'];
+                $newAccount['domain'] = explode('@', $data['email'])[1];
+                $newAccount['profile_package_class'] = str_replace('\\', '_', Employees::class);
+                $newAccount['profile_package_row_id'] = $employee['id'];
+
+                if ($this->basepackages->accounts->add($newAccount)) {
+                    $employee['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
+
+                    $security = [];
+                    $security['role_id'] = 3;//Guest;
+                    $security['override_role'] = false;
+                    $security['permissions'] = $this->helper->encode([]);
+                    $security['force_pwreset'] = false;
+                    $password = $this->basepackages->utils->generateNewPassword()['password'];
+                    $security['password'] = $this->secTools->hashPassword($password);
+                    $security['password_set_on'] = time();
+                    $security['account_id'] = $this->basepackages->accounts->packagesData->last['id'];
+
+                    $securityModel = new BasepackagesUsersAccountsSecurity;
+
+                    $securityStore = $this->ff->store($securityModel->getSource());
+
+                    if ($this->config->databasetype === 'db') {
+                        $securityModel->assign($security);
+
+                        $securityModel->create();
+                    } else {
+                        $securityStore->insert($security);
+                    }
+                }
+            } else {
+                $employee['account_id'] = $emailAccount['id'];
+            }
+
+            $this->update($employee);
         }
     }
 
